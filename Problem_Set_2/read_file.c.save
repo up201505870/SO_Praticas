@@ -1,0 +1,56 @@
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+
+void usage();
+
+int main(int argc, char **argv) {
+
+	if(argc == 1) {
+		usage();
+		return -1;
+	}
+
+	int file = open(argv[1], O_RDONLY);
+
+	if(file < 0) {
+		write(STDOUT_FILENO, "Could not open file. Exiting\n", 63);
+		return -1;
+	}
+
+	char buf[64];
+
+	if(argc == 2) {
+		int size;
+		int totalSize = 0;
+		while((size = read(file, buf, 64)) > 0) {
+			write(STDOUT_FILENO, buf, size);
+			totalSize += size;
+		}
+		close(file);
+	} else if(argc == 3) {
+
+		int output = read(argv[2], O_WRONLY | O_TRUNC | O_EXCL);
+
+		if(output < 0) {
+			printf("%s is an existing file.\n", argv[2]);
+			close(file);
+			return 0;
+		}
+
+		while();
+
+	}
+
+	printf("\nNumero total de bytes lidos: %d\n", totalSize);
+
+	return 0;
+}
+
+void usage() {
+
+	write(STDOUT_FILENO, "Usage: read_file \"file.txt\"\n", 30);
+
+}
