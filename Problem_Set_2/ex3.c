@@ -56,9 +56,8 @@ int main(int argc, char **argv) {
 
         sprintf(buff, "%x", test.grades[i]);
         write(file, buff, 2);
-        write(file, "\n", 1);
     }
-
+	write(file, "\n", 1);
     close(file);
 
     return 0;
