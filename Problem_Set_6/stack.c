@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
 
 struct stack *init(int size) {
 
@@ -17,19 +18,12 @@ struct stack *init(int size) {
 
 int push(struct stack *sp, struct stack_el *el) {
 
-    if(sp->top == sp->size) {
-        return 0;
-    }
-
     sp->sp[sp->top] = el;
     sp->top++;
     return 1;
 }
 
 struct stack_el *pop(struct stack *sp) {
-
-    if(sp->top == 0)
-        return NULL;
 
     struct stack_el *el = sp->sp[sp->top];
     sp->sp[sp->top] = NULL;
@@ -54,3 +48,5 @@ void spfree(struct stack *sp) {
 
     return;
 }
+
+
