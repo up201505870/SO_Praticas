@@ -9,7 +9,9 @@ struct stack_el {
 struct stack {    	
 	struct stack_el **sp;  
 	int size;            
-	int top;			  
+	int top;
+	pthread_mutex_t mutex;
+	pthread_cond_t full, empty;		  
 };
 
 struct stack *init(int size);	// initialize stack. Returns pointer to

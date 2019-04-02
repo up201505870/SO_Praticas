@@ -12,6 +12,9 @@ struct stack *init(int size) {
             malloc(sizeof(struct stack_el *) * size);
     sp->size = size;
     sp->top = 0;
+    sp->mutex = PTHREAD_MUTEX_INITIALIZER;
+    sp->full  = PTHREAD_COND_INITIALIZER;
+    sp->empty = PTHREAD_COND_INITIALIZER;
 
     return sp;
 }
