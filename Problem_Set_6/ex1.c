@@ -31,7 +31,7 @@ void *output(void *args) {
 
 int main(int argc, char **argv) {
 
-    struct stack *s = init(3);
+    struct stack *s = init(7);
 
     pthread_t tid[2];
 

@@ -12,7 +12,7 @@ struct stack {
 	int size;            
 	int top;
 	pthread_mutex_t mutex;
-	pthread_cond_t full, empty;		  
+	pthread_cond_t full, empty;  
 };
 
 struct stack *init(int size);	// initialize stack. Returns pointer to
