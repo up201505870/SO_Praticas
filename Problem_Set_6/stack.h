@@ -1,5 +1,6 @@
 #ifndef STACK_H
 #define STACK_H
+#include <pthread.h>
 
 struct stack_el {
 	char *str;
