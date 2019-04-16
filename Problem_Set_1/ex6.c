@@ -1,8 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-char * months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-
+char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
 int no_months(char *mon1, char *mon2) {
 
@@ -27,15 +27,15 @@ int no_months(char *mon1, char *mon2) {
 
 }
 
-int main() {
+int main (int argc, char **argv) {
 
     for(int i = 0; i < 12; i++) {
-    
-        printf("%s\n", *(months + i));
+
+        printf("%s\n", *(months+i));
     
     }
-    
+
     printf("%d\n", no_months("Jun", "Jan"));
 
-	return 0;
+    return 0;
 }
