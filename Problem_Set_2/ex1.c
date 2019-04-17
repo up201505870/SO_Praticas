@@ -1,64 +1,48 @@
+#include <stdio.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-#include <stdio.h>
+#include <fcntl.h> 
 
-void usage();
+#define BUFFERSIZE 64
 
 int main(int argc, char **argv) {
 
-	if(argc == 1) {
-		usage();
+	if (argc != 3) {
+		printf("Wrong use of program.\n");
 		return -1;
 	}
 
 	int file = open(argv[1], O_RDONLY);
+	int file2 = open(argv[2], O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 
-	if(file < 0) {
-		write(STDOUT_FILENO, "Could not open file. Exiting\n", 63);
+	if (file2 < 0 ) { // Error while creating file
+		printf("File already exists.\n");
 		return -1;
 	}
 
-	char buf[64];
-	int size;
-	int totalSize = 0;
+	int size = 0;
+	char buffer[BUFFERSIZE];
+	memset(buffer, 0, BUFFERSIZE);
+	int b;
 
-	if(argc == 2) {
+	while( (b = read(file, buffer, BUFFERSIZE)) != 0) {
 
-		while((size = read(file, buf, 64)) > 0) {
-			write(STDOUT_FILENO, buf, size);
-			totalSize += size;
-		}
+		printf("%s", buffer);
+		size += b;
+		write(file2, buffer, b);
 
-	} else if(argc == 3) {
-
-		int output = open(argv[2], O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-
-		if(output < 0) {
-			printf("%s is an existing file.\n", argv[2]);
-			close(file);
-			return 0;
-		}
-
-		while((size = read(file, buf, 64)) > 0) {
-			write(output, buf, size);
-			totalSize += size;
-		}
-
-		close(output);
+		memset(buffer, 0, BUFFERSIZE);
 
 	}
 
 	close(file);
+	close(file2);
 
-	printf("\nNumero total de bytes lidos: %d\n", totalSize);
+	printf("\nRead %d bytes.\n", size);
 
 	return 0;
-}
-
-void usage() {
-
-	write(STDOUT_FILENO, "Usage: read_file \"file.txt\"\n", 30);
-
 }
