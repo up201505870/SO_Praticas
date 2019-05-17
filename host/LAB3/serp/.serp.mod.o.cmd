@@ -1,7 +1,7 @@
-cmd_/host/serp/serp.mod.o := gcc -m32 -Wp,-MD,/host/serp/.serp.mod.o.d  -nostdinc -isystem /usr/lib/gcc/i486-linux-gnu/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -O2 -pipe -msoft-float -mpreferred-stack-boundary=2  -march=i686  -mregparm=3 -ffreestanding -maccumulate-outgoing-args -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -Iinclude/asm-i386/mach-default -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(serp.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(serp)" -DMODULE -c -o /host/serp/serp.mod.o /host/serp/serp.mod.c
+cmd_/host/LAB3/serp/serp.mod.o := gcc -m32 -Wp,-MD,/host/LAB3/serp/.serp.mod.o.d  -nostdinc -isystem /usr/lib/gcc/i486-linux-gnu/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -O2 -pipe -msoft-float -mpreferred-stack-boundary=2  -march=i686  -mregparm=3 -ffreestanding -maccumulate-outgoing-args -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -Iinclude/asm-i386/mach-default -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(serp.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(serp)" -DMODULE -c -o /host/LAB3/serp/serp.mod.o /host/LAB3/serp/serp.mod.c
 
-deps_/host/serp/serp.mod.o := \
-  /host/serp/serp.mod.c \
+deps_/host/LAB3/serp/serp.mod.o := \
+  /host/LAB3/serp/serp.mod.c \
     $(wildcard include/config/module/unload.h) \
   include/linux/module.h \
     $(wildcard include/config/modules.h) \
@@ -296,6 +296,6 @@ deps_/host/serp/serp.mod.o := \
   include/linux/vermagic.h \
   include/linux/utsrelease.h \
 
-/host/serp/serp.mod.o: $(deps_/host/serp/serp.mod.o)
+/host/LAB3/serp/serp.mod.o: $(deps_/host/LAB3/serp/serp.mod.o)
 
-$(deps_/host/serp/serp.mod.o):
+$(deps_/host/LAB3/serp/serp.mod.o):

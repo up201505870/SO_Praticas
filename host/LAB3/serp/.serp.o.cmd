@@ -1,7 +1,7 @@
-cmd_/host/serp/serp.o := gcc -m32 -Wp,-MD,/host/serp/.serp.o.d  -nostdinc -isystem /usr/lib/gcc/i486-linux-gnu/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -O2 -pipe -msoft-float -mpreferred-stack-boundary=2  -march=i686  -mregparm=3 -ffreestanding -maccumulate-outgoing-args -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -Iinclude/asm-i386/mach-default -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign   -DMODULE -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(serp)"  -D"KBUILD_MODNAME=KBUILD_STR(serp)" -c -o /host/serp/.tmp_serp.o /host/serp/serp.c
+cmd_/host/LAB3/serp/serp.o := gcc -m32 -Wp,-MD,/host/LAB3/serp/.serp.o.d  -nostdinc -isystem /usr/lib/gcc/i486-linux-gnu/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -O2 -pipe -msoft-float -mpreferred-stack-boundary=2  -march=i686  -mregparm=3 -ffreestanding -maccumulate-outgoing-args -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -Iinclude/asm-i386/mach-default -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign   -DMODULE -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(serp)"  -D"KBUILD_MODNAME=KBUILD_STR(serp)" -c -o /host/LAB3/serp/.tmp_serp.o /host/LAB3/serp/serp.c
 
-deps_/host/serp/serp.o := \
-  /host/serp/serp.c \
+deps_/host/LAB3/serp/serp.o := \
+  /host/LAB3/serp/serp.c \
   include/linux/init.h \
     $(wildcard include/config/modules.h) \
     $(wildcard include/config/hotplug.h) \
@@ -366,7 +366,13 @@ deps_/host/serp/serp.o := \
   include/asm/uaccess.h \
     $(wildcard include/config/x86/intel/usercopy.h) \
     $(wildcard include/config/x86/wp/works/ok.h) \
+  /host/LAB3/serp/serial_reg.h \
+  include/asm/io.h \
+    $(wildcard include/config/x86/ppro/fence.h) \
+    $(wildcard include/config/x86/numaq.h) \
+  include/asm-generic/iomap.h \
+  include/linux/vmalloc.h \
 
-/host/serp/serp.o: $(deps_/host/serp/serp.o)
+/host/LAB3/serp/serp.o: $(deps_/host/LAB3/serp/serp.o)
 
-$(deps_/host/serp/serp.o):
+$(deps_/host/LAB3/serp/serp.o):
