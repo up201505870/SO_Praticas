@@ -24,22 +24,24 @@ struct cdev *cdev;
 static int serp_open(struct inode *inode, struct file *filp);
 static int serp_release(struct inode *inode, struct file *filp);
 ssize_t serp_write(struct file *filep, const char __user *buff, size_t count, loff_t *offp);
+ssize_t serp_read(struct file *filep, char __user *buff, size_t count, loff_t *offp);
 
 struct file_operations fops = {
 	.owner 		= THIS_MODULE,
 	.open  		= serp_open,
 	.release 	= serp_release,
 	.write		= serp_write,
-	.read 		= NULL,
+	.read 		= serp_read,
 	.llseek		= no_llseek,
 };
 
 static int serp_open(struct inode *inode, struct file *filp) {
 
 	filp->private_data = &cdev;
-	printk(KERN_ALERT "Open operation invoked.\n");
 
 	nonseekable_open(inode, filp);
+
+	printk(KERN_ALERT "Open operation invoked.\n");
 
 	return 0;
 
@@ -50,6 +52,35 @@ static int serp_release(struct inode *inode, struct file *filp) {
 	printk(KERN_ALERT "Release operation invoked.\n");
 
 	return 0;
+
+}
+
+ssize_t serp_read(struct file *filep, char __user *buff, size_t count, loff_t *offp) {
+
+	int status;
+	unsigned char rx;
+
+	if(inb(BASE + UART_LSR) & UART_LSR_OE) {
+
+		return -EIO;
+
+	} 
+	
+	if(!(inb(BASE + UART_LSR) & UART_LSR_DR)) { // No char to be read
+
+		return -EAGAIN;
+
+	} else {
+
+		rx = inb(BASE + UART_RX);
+
+		status = copy_to_user(buff, &rx, 1);
+		if (status != 0)
+			printk(KERN_ALERT "Couldn't copy all bytes.\n");
+
+	}
+
+	return 1;
 
 }
 
@@ -73,7 +104,7 @@ ssize_t serp_write(struct file *filep, const char __user *buff, size_t count, lo
 
 	for(i = 0; i < count; i++) {
 
-		while (inb(UART_LSR_THRE)) { 
+		while (inb(BASE + UART_LSR_THRE)) { 
 			schedule();
 		}
 
@@ -123,8 +154,9 @@ static int serp_init(void)
 	lcr |= UART_LCR_DLAB; // Activate DLAB to set bps
 	outb(lcr, BASE + UART_LCR);
 
-	msb = UART_DIV_1200 & 0xf0; // MSB
+	msb = (UART_DIV_1200 >> 4) ; // MSB
 	lsb = UART_DIV_1200 & 0x0f; // LSB
+
 	outb(msb, BASE + UART_DLM);
 	outb(lsb, BASE + UART_DLL);
 

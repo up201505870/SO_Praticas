@@ -12,6 +12,7 @@ int main(int argc, char **argv) {
     }
 
     int fd = open(argv[1], O_RDWR);
+
     if (fd < 0) {
 
         printf("Error opening file.\n");
@@ -19,12 +20,19 @@ int main(int argc, char **argv) {
         
     }
 
-    printf("---------WRITE--------\n");
+    printf("Reading...\n");
 
-    write(fd, "Ola!\n\0", 6);
+    char c = ' ';
+    int s = 0;
 
-    printf("-----------------\n");
-    char x;
+    while(c != 'x') {
+
+        s = read(fd, &c, 1);
+        if (s == 1)
+            printf("%c", c);
+
+    }
+
     close(fd);
     return 0;
 
