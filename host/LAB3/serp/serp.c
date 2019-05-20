@@ -14,7 +14,7 @@
 #include <asm/io.h>
 #include <linux/sched.h>
 
-#define BASE 0x3f8
+#define UART_BASE 0x3f8
 
 MODULE_LICENSE("Dual BSD/GPL");
 
@@ -60,19 +60,19 @@ ssize_t serp_read(struct file *filep, char __user *buff, size_t count, loff_t *o
 	int status;
 	unsigned char rx;
 
-	if(inb(BASE + UART_LSR) & UART_LSR_OE) {
+	if(inb(UART_BASE + UART_LSR) & UART_LSR_OE) {
 
 		return -EIO;
 
 	} 
 	
-	if(!(inb(BASE + UART_LSR) & UART_LSR_DR)) { // No char to be read
+	if(!(inb(UART_BASE + UART_LSR) & UART_LSR_DR)) { // No char to be read
 
 		return -EAGAIN;
 
 	} else {
 
-		rx = inb(BASE + UART_RX);
+		rx = inb(UART_BASE + UART_RX);
 
 		status = copy_to_user(buff, &rx, 1);
 		if (status != 0)
@@ -104,11 +104,11 @@ ssize_t serp_write(struct file *filep, const char __user *buff, size_t count, lo
 
 	for(i = 0; i < count; i++) {
 
-		while (inb(BASE + UART_LSR_THRE)) { 
+		while (inb(UART_BASE + UART_LSR_THRE)) { 
 			schedule();
 		}
 
-		outb(buffer[i], BASE + UART_TX);
+		outb(buffer[i], UART_BASE + UART_TX);
 
 	}
 
@@ -144,7 +144,7 @@ static int serp_init(void)
 	}
 
 	// Disable Interrupts
-	outb(0, BASE + UART_IER);
+	outb(0, UART_BASE + UART_IER);
 
 	// Initialize UART
 	lcr |= UART_LCR_WLEN8 | // 8 Bit chars    bit 0,1 - 11
@@ -152,23 +152,23 @@ static int serp_init(void)
 		   UART_LCR_PARITY | UART_LCR_EPAR;  // Even parity bit 5,4,3 - 011
 		   
 	lcr |= UART_LCR_DLAB; // Activate DLAB to set bps
-	outb(lcr, BASE + UART_LCR);
+	outb(lcr, UART_BASE + UART_LCR);
 
 	msb = (UART_DIV_1200 >> 4) ; // MSB
 	lsb = UART_DIV_1200 & 0x0f; // LSB
 
-	outb(msb, BASE + UART_DLM);
-	outb(lsb, BASE + UART_DLL);
+	outb(msb, UART_BASE + UART_DLM);
+	outb(lsb, UART_BASE + UART_DLL);
 
 	lcr &= ~UART_LCR_DLAB; // Deactivate DLAB
-	outb(lcr, BASE + UART_LCR);
+	outb(lcr, UART_BASE + UART_LCR);
 
 	// Send char
 	while (inb(UART_LSR_THRE)) { // Check if THRE is empty and ready to receive a byte
 		schedule(); // If not this function allows for the SO to do something else (acho eu xD)
 	}
 
-	outb('a', BASE + UART_TX);
+	outb('a', UART_BASE + UART_TX);
 
 	return 0;
 }

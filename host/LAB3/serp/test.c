@@ -6,12 +6,7 @@
 
 int main(int argc, char **argv) {
 
-    if (argc != 2) {
-        printf("Wrong use of program.\n");
-        return -1;
-    }
-
-    int fd = open(argv[1], O_RDWR);
+    int fd = open("/dev/serp", O_RDWR);
 
     if (fd < 0) {
 
@@ -28,8 +23,9 @@ int main(int argc, char **argv) {
     while(c != 'x') {
 
         s = read(fd, &c, 1);
-        if (s == 1)
-            printf("%c", c);
+        if (s == 1) {
+            printf("Received char - %c\n", c);
+        }
 
     }
 
