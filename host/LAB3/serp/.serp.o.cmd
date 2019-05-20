@@ -372,6 +372,8 @@ deps_/host/LAB3/serp/serp.o := \
     $(wildcard include/config/x86/numaq.h) \
   include/asm-generic/iomap.h \
   include/linux/vmalloc.h \
+  include/linux/delay.h \
+  include/asm/delay.h \
 
 /host/LAB3/serp/serp.o: $(deps_/host/LAB3/serp/serp.o)
 

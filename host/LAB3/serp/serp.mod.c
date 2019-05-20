@@ -18,10 +18,11 @@ __attribute_used__
 __attribute__((section("__versions"))) = {
 	{ 0x8d0ae4f, "struct_module" },
 	{ 0x133d4e85, "no_llseek" },
+	{ 0x2da418b5, "copy_to_user" },
+	{ 0xcc5005fe, "msleep_interruptible" },
 	{ 0x37a0cba, "kfree" },
 	{ 0xf2a644fb, "copy_from_user" },
 	{ 0x12da5bb2, "__kmalloc" },
-	{ 0x2da418b5, "copy_to_user" },
 	{ 0x4292364c, "schedule" },
 	{ 0xd85a396a, "cdev_add" },
 	{ 0x2be5747e, "cdev_alloc" },

@@ -13,6 +13,7 @@
 #include "serial_reg.h"
 #include <asm/io.h>
 #include <linux/sched.h>
+#include <linux/delay.h>
 
 #define UART_BASE 0x3f8
 
@@ -57,28 +58,42 @@ static int serp_release(struct inode *inode, struct file *filp) {
 
 ssize_t serp_read(struct file *filep, char __user *buff, size_t count, loff_t *offp) {
 
-	int status;
-	unsigned char rx;
+	int status, i = 0;
+	unsigned char rx = ' ';
+	char *buffer;
 
-	if(inb(UART_BASE + UART_LSR) & UART_LSR_OE) {
+	buffer = kmalloc(sizeof(char) * count, GFP_KERNEL);
+	memset(buffer, 0, sizeof(char) * count);
 
-		return -EIO;
-
-	} 
+	while((int)rx != 13 && (i < count - 1)) { // Wait for enter to return
 	
-	if(!(inb(UART_BASE + UART_LSR) & UART_LSR_DR)) { // No char to be read
+		if(inb(UART_BASE + UART_LSR) & UART_LSR_OE) {
 
-		return -EAGAIN;
+			return -EIO;
 
-	} else {
+		} 
+		
+		if(inb(UART_BASE + UART_LSR) & UART_LSR_DR) { 
 
-		rx = inb(UART_BASE + UART_RX);
+			rx = inb(UART_BASE + UART_RX);
 
-		status = copy_to_user(buff, &rx, 1);
-		if (status != 0)
-			printk(KERN_ALERT "Couldn't copy all bytes.\n");
-
+			buffer[i] = rx;
+			i++;
+		} else {
+			msleep_interruptible(10);
+		}
 	}
+
+	if(buffer[i] != '\0') {
+		buffer[i] = '\0';
+		i++;
+	}
+
+	printk(KERN_ALERT "Read %s\n", buffer);
+
+	status = copy_to_user(buff, buffer, i * sizeof(char));
+	if (status != 0)
+		printk(KERN_ALERT "Couldn't copy all bytes.\n");
 
 	return 1;
 
