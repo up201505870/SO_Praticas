@@ -28,6 +28,7 @@ static int seri_release(struct inode *inode, struct file *filp);
 ssize_t seri_write(struct file *filep, const char __user *buff, size_t count, loff_t *offp);
 ssize_t seri_read(struct file *filep, char __user *buff, size_t count, loff_t *offp);
 
+static void w_char(const char c);
 irqreturn_t seri_interrupt(int irq, void *dev_id);
 
 struct seri_dev {
@@ -50,13 +51,42 @@ struct file_operations seri_fops = {
 	.llseek		= no_llseek,
 };
 
-irqreturn_t seri_interrupt(int irq, void *dev_id) {
+char *c;
+int c_i;
 
-	while (!inb(UART_BASE + UART_LSR_THRE)) { // Check if THRE is empty and ready to receive a byte
-		schedule(); // If not this function allows for the SO to do something else (acho eu xD)
+
+static void w_char(const char c) {
+
+	while (!(inb(UART_BASE + UART_LSR) & UART_LSR_THRE)) { // Check if THRE is empty and ready to receive a byte
+		msleep_interruptible(10);
 	}
 
-	outb('i', UART_BASE + UART_TX);
+	outb(c, UART_BASE + UART_TX);
+
+}
+
+irqreturn_t seri_interrupt(int irq, void *dev_id) {
+
+	unsigned char in = inb(UART_BASE + UART_IIR);
+
+	if (in & UART_IIR_NO_INT) { // No interruption
+
+		c[c_i] = 'x';
+		c_i++;
+
+	} else if (in & UART_IIR_RLSI) {
+
+		c[c_i] = 'l';
+		c_i++;
+	} else if (in & UART_IIR_RDI) {
+
+		c[c_i] = 'r';
+		c_i++;
+	} else if (in & UART_IIR_THRI) {
+
+		c[c_i] = 't';
+		c_i++;
+	}
 
 	return IRQ_HANDLED;
 
@@ -65,13 +95,8 @@ irqreturn_t seri_interrupt(int irq, void *dev_id) {
 static int seri_open(struct inode *inode, struct file *filp) {
 
 	struct seri_dev *dev;
-	int status;
 
 	dev = container_of(inode->i_cdev, struct seri_dev, cdev);
-
-	if (status) {
-		printk(KERN_ALERT "Error with requesting IRQ %d.\n", status);
-	}
 
 	filp->private_data = dev;
 
@@ -87,13 +112,15 @@ static int seri_release(struct inode *inode, struct file *filp) {
 
 ssize_t seri_read(struct file *filep, char __user *buff, size_t count, loff_t *offp) {
 
-	struct seri_dev *dev = filep->private_data;
+	printk(KERN_ALERT "Ints: %s\n", c);
 
 	return 0;
 
 }
 
 ssize_t seri_write(struct file *filep, const char __user *buff, size_t count, loff_t *offp) {
+
+	// struct seri_dev *dev = filep->private_data;
 
 	return 0;
 
@@ -120,6 +147,11 @@ static int seri_init(void)
 	unsigned char msb = 0, lsb = 0; // Msb and Lsb for DL
 	unsigned char ier = 0;
 
+	c_i = 0;
+	c = kmalloc(512 * sizeof(char), GFP_KERNEL);
+	memset(c, 0, 512 * sizeof(char));
+
+
 	if (seri_major) {
 		status = register_chrdev_region(dev, seri_devs, "seri");
 	} else {
@@ -140,9 +172,13 @@ static int seri_init(void)
 	for (i = 0; i < seri_devs; i++) {
 		
 		seri_setup_cdev(seri_devices + i, i);
-		status = request_irq(4, seri_interrupt, 0, "seri", seri_devices + i);
 
-	}	
+	}
+
+	status = request_irq(4, seri_interrupt, 0, "seri", &seri_devices[0]);
+	if (status) {
+		printk(KERN_ALERT "Error with requesting IRQ %d.\n", status);
+	}
 
 	// Initialize UART
 
@@ -168,11 +204,7 @@ static int seri_init(void)
 	outb(lcr, UART_BASE + UART_LCR);
 
 	// Send char
-	while (!inb(UART_BASE + UART_LSR_THRE)) { // Check if THRE is empty and ready to receive a byte
-		schedule(); // If not this function allows for the SO to do something else (acho eu xD)
-	}
-
-	outb('a', UART_BASE + UART_TX);
+	w_char('a');
 
 	return 0; // Success
 
@@ -188,9 +220,9 @@ static void seri_exit(void)
 	for (i = 0; i < seri_devs; i++) {
 
 		cdev_del(&seri_devices[i].cdev);
-		free_irq(4, seri_devices + i);
 
 	}
+	free_irq(4, &seri_devices[0]);
 	kfree(seri_devices);
 
 	unregister_chrdev_region(MKDEV (seri_major, 0), seri_devs);

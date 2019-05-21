@@ -7,20 +7,22 @@
 
 int main(int argc, char **argv) {
 
-    int fd = open("/dev/seri", O_RDWR);
+    int fd0 = open("/dev/seri0", O_RDWR);
 
-    if (fd < 0) {
+    if (fd0 < 0) {
 
-        printf("Error opening file.\n");
+        printf("Error opening file 0.\n");
         return -1;
         
     }
 
     char x;
 
-    read(fd, &x, 1);
-
-    close(fd);
+    while(1) {
+        read(fd0, &x, 1);
+    }
+    
+    close(fd0);
     return 0;
 
 }

@@ -35,7 +35,7 @@ static int serp_open(struct inode *inode, struct file *filep);
 static int serp_release(struct inode *inode, struct file *filep);
 ssize_t serp_write(struct file *filep, const char __user *buff, size_t count, loff_t *offp);
 ssize_t serp_read(struct file *filep, char __user *buff, size_t count, loff_t *offp);
-static void serp_setup_cdev(struct serp_dev *dev, int index);
+static int serp_setup_cdev(struct serp_dev *dev, int index);
 
 // Global Variables
 int serp_major = SERP_MAJOR;
@@ -129,8 +129,9 @@ ssize_t serp_write(struct file *filep, const char __user *buff, size_t count, lo
 	memset(buffer, 0, sizeof(char) * count);
 
 	status = copy_from_user(buffer, buff, count);
-	if (status != 0) { // TODO: Error
+	if (status != 0) {
 		printk(KERN_ALERT "Couldn't copy all bytes.\n");
+		return -1;
 
 	}
 
@@ -143,16 +144,16 @@ ssize_t serp_write(struct file *filep, const char __user *buff, size_t count, lo
 			schedule();
 		}
 
-		outb(buffer[i], UART_BASE + UART_TX); // TODO: Error
+		outb(buffer[i], UART_BASE + UART_TX);
 
 	}
 
-	kfree(buffer); // TODO: Error
+	kfree(buffer); 
 	return 0;
 
 }
 
-static void serp_setup_cdev(struct serp_dev *dev, int index) // TODO: Error
+static int serp_setup_cdev(struct serp_dev *dev, int index)
 {
 	int err, devno = MKDEV(serp_major, index);
     
@@ -164,8 +165,12 @@ static void serp_setup_cdev(struct serp_dev *dev, int index) // TODO: Error
 	dev->cdev.ops = &serp_fops;
 	err = cdev_add (&dev->cdev, devno, 1);
 	/* Fail gracefully if need be */
-	if (err) // TODO: Error
+	if (err) {
 		printk(KERN_NOTICE "Error %d adding serp%d", err, index);
+		return err;
+	}
+
+	return 0; // Success
 }
 
 static int serp_init(void)
@@ -195,14 +200,17 @@ static int serp_init(void)
 	
 	for (i = 0; i < serp_devs; i++) {
 		
-		serp_setup_cdev(serp_devices + i, i);
+		status = serp_setup_cdev(serp_devices + i, i);
+		if (status) {
+			return status;
+		}
 
 	}	
 
 	// UART CONFIGS
 
 	// Disable Interrupts
-	outb(0, UART_BASE + UART_IER); // TODO: Error
+	outb(0, UART_BASE + UART_IER);
 
 	// Initialize UART
 	lcr |= UART_LCR_WLEN8 | // 8 Bit chars    bit 0,1 - 11
@@ -210,16 +218,16 @@ static int serp_init(void)
 		   UART_LCR_PARITY | UART_LCR_EPAR;  // Even parity bit 5,4,3 - 011
 		   
 	lcr |= UART_LCR_DLAB; // Activate DLAB to set bps
-	outb(lcr, UART_BASE + UART_LCR); // TODO: Error
+	outb(lcr, UART_BASE + UART_LCR);
 
 	msb = (UART_DIV_1200 >> 4) ; // MSB
 	lsb = UART_DIV_1200 & 0x0f; // LSB
 
-	outb(msb, UART_BASE + UART_DLM); // TODO: Error
+	outb(msb, UART_BASE + UART_DLM);
 	outb(lsb, UART_BASE + UART_DLL);
 
 	lcr &= ~UART_LCR_DLAB; // Deactivate DLAB
-	outb(lcr, UART_BASE + UART_LCR); // TODO: Error
+	outb(lcr, UART_BASE + UART_LCR);
 
 	// Send char
 	for (i = 0; i < 7; i++)
@@ -228,10 +236,8 @@ static int serp_init(void)
 			schedule(); // If not this function allows for the SO to do something else (acho eu xD)
 		}
 
-		outb(c[i], UART_BASE + UART_TX); // TODO: Error
+		outb(c[i], UART_BASE + UART_TX);
 	}
-	
-	
 
 	return 0;
 
@@ -247,12 +253,12 @@ static void serp_exit(void)
 
 	for (i = 0; i < serp_devs; i++) {
 
-		cdev_del(&serp_devices[i].cdev); // TODO: Error
-
+		cdev_del(&serp_devices[i].cdev);
 	}
-	kfree(serp_devices); // TODO: Error
 
-	unregister_chrdev_region(MKDEV (serp_major, 0), serp_devs); // TODO: Error
+	kfree(serp_devices);
+
+	unregister_chrdev_region(MKDEV (serp_major, 0), serp_devs);
 
 	for (i = 0; i < 6; i++)
 	{
@@ -260,7 +266,7 @@ static void serp_exit(void)
 			schedule(); // If not this function allows for the SO to do something else (acho eu xD)
 		}
 
-		outb(c[i], UART_BASE + UART_TX); // TODO: Error
+		outb(c[i], UART_BASE + UART_TX);
 	}
 
 }
