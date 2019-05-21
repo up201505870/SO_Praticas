@@ -9,9 +9,6 @@ else
 fi
 insmod -f ./${module}.ko || exit 1
 major=`cat /proc/devices | awk "\\$2==\"$module\" {print \\$1}"| head -n 1`
-mknod /dev/${module}0 c $major 0
-mknod /dev/${module}1 c $major 1
-mknod /dev/${module}2 c $major 2
-mknod /dev/${module}3 c $major 3
-chmod a+rw /dev/${module}[0-3]
+mknod /dev/${module} c $major 0
+chmod a+rw /dev/${module}
 exit 0

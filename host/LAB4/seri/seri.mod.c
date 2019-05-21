@@ -18,21 +18,18 @@ __attribute_used__
 __attribute__((section("__versions"))) = {
 	{ 0x8d0ae4f, "struct_module" },
 	{ 0x133d4e85, "no_llseek" },
-	{ 0xf2a644fb, "copy_from_user" },
-	{ 0x2da418b5, "copy_to_user" },
 	{ 0x29537c9e, "alloc_chrdev_region" },
-	{ 0x1b7d4074, "printk" },
+	{ 0x4292364c, "schedule" },
 	{ 0xd85a396a, "cdev_add" },
 	{ 0xbb37bf2e, "cdev_init" },
-	{ 0x8523fd53, "kmem_cache_alloc" },
-	{ 0xb13d73c9, "malloc_sizes" },
 	{ 0x12da5bb2, "__kmalloc" },
 	{ 0xd8e484f0, "register_chrdev_region" },
-	{ 0x4292364c, "schedule" },
 	{ 0x7485e15e, "unregister_chrdev_region" },
 	{ 0x37a0cba, "kfree" },
 	{ 0x4bd6e07e, "cdev_del" },
-	{ 0x2323fd40, "nonseekable_open" },
+	{ 0x1b7d4074, "printk" },
+	{ 0x2cf190e3, "request_irq" },
+	{ 0xf20dabd8, "free_irq" },
 };
 
 static const char __module_depends[]
