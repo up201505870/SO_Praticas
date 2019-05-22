@@ -28,14 +28,14 @@ int main(int argc, char **argv) {
     int s = 0;
 
     s = read(fd0, c, 32);
-    if (s == 1) {
+    if (s == 0) {
         printf("[fd0] Received string - %s\n", c);
     } else {
         printf("[fd0] Error reading: %d\n", s);
     }
 
     s = read(fd1, c, 32);
-    if (s == 1) {
+    if (s == 0) {
         printf("[fd1] Received string - %s\n", c);
     } else {
         printf("[fd1] Error reading: %d\n", s);

@@ -88,6 +88,8 @@ irqreturn_t seri_interrupt(int irq, void *dev_id) {
 		c_i++;
 	}
 
+	c[c_i] = 'n';
+
 	return IRQ_HANDLED;
 
 }
@@ -112,7 +114,7 @@ static int seri_release(struct inode *inode, struct file *filp) {
 
 ssize_t seri_read(struct file *filep, char __user *buff, size_t count, loff_t *offp) {
 
-	printk(KERN_ALERT "Ints: %s\n", c);
+	printk(KERN_NOTICE "Ints: %s\n", c);
 
 	return 0;
 
@@ -175,11 +177,6 @@ static int seri_init(void)
 
 	}
 
-	status = request_irq(4, seri_interrupt, 0, "seri", &seri_devices[0]);
-	if (status) {
-		printk(KERN_ALERT "Error with requesting IRQ %d.\n", status);
-	}
-
 	// Initialize UART
 
 	// Enable Reciever Data Available and Transmitter Holding Register Empty Interrupts
@@ -194,14 +191,19 @@ static int seri_init(void)
 	lcr |= UART_LCR_DLAB; // Activate DLAB to set bps
 	outb(lcr, UART_BASE + UART_LCR);
 
-	msb = (UART_DIV_1200 >> 4) ; // MSB
-	lsb = UART_DIV_1200 & 0x0f; // LSB
+	msb = (UART_DIV_1200 >> 8) ; // MSB
+	lsb = UART_DIV_1200 & 0xff; // LSB
 
 	outb(msb, UART_BASE + UART_DLM);
 	outb(lsb, UART_BASE + UART_DLL);
 
 	lcr &= ~UART_LCR_DLAB; // Deactivate DLAB
 	outb(lcr, UART_BASE + UART_LCR);
+
+	status = request_irq(4, seri_interrupt, 0, "seri", &seri_devices[0]);
+	if (status) {
+		printk(KERN_ALERT "Error with requesting IRQ %d.\n", status);
+	}
 
 	// Send char
 	w_char('a');

@@ -18,9 +18,7 @@ int main(int argc, char **argv) {
 
     char x;
 
-    while(1) {
-        read(fd0, &x, 1);
-    }
+    read(fd0, &x, 1);
     
     close(fd0);
     return 0;

@@ -31,11 +31,13 @@ struct serp_dev {
 	char *rx_buffer;
 	struct cdev cdev;
 };
+
 static int serp_open(struct inode *inode, struct file *filep);
 static int serp_release(struct inode *inode, struct file *filep);
 ssize_t serp_write(struct file *filep, const char __user *buff, size_t count, loff_t *offp);
 ssize_t serp_read(struct file *filep, char __user *buff, size_t count, loff_t *offp);
 static int serp_setup_cdev(struct serp_dev *dev, int index);
+static void w_char(const char c);
 
 // Global Variables
 int serp_major = SERP_MAJOR;
@@ -52,6 +54,15 @@ struct file_operations serp_fops = {
 	.llseek		= no_llseek,
 };
 
+static void w_char(const char c) {
+
+	while (!(inb(UART_BASE + UART_LSR) & UART_LSR_THRE)) { // Check if THRE is empty and ready to receive a byte
+		msleep_interruptible(10);
+	}
+
+	outb(c, UART_BASE + UART_TX);
+
+}
 
 static int serp_open(struct inode *inode, struct file *filep) {
 
@@ -83,6 +94,7 @@ ssize_t serp_read(struct file *filep, char __user *buff, size_t count, loff_t *o
 	buffer = kmalloc(sizeof(char) * count, GFP_KERNEL);
 	memset(buffer, 0, sizeof(char) * count);
 
+	// 13 - means (Enter)
 	while((int)rx != 13 && (i < count - 1)) { // Wait for enter to return
 	
 		if(inb(UART_BASE + UART_LSR) & UART_LSR_OE) {
@@ -115,6 +127,8 @@ ssize_t serp_read(struct file *filep, char __user *buff, size_t count, loff_t *o
 		return -1; // Failed to copy, message stored in buffer
 	}
 
+	kfree(buffer);
+
 	return 0;
 
 }
@@ -140,11 +154,7 @@ ssize_t serp_write(struct file *filep, const char __user *buff, size_t count, lo
 
 	for(i = 0; i < count; i++) {
 
-		while (!(inb(UART_BASE + UART_LSR) & UART_LSR_THRE)) {
-			schedule();
-		}
-
-		outb(buffer[i], UART_BASE + UART_TX);
+		w_char(buffer[i]);
 
 	}
 
@@ -220,8 +230,8 @@ static int serp_init(void)
 	lcr |= UART_LCR_DLAB; // Activate DLAB to set bps
 	outb(lcr, UART_BASE + UART_LCR);
 
-	msb = (UART_DIV_1200 >> 4) ; // MSB
-	lsb = UART_DIV_1200 & 0x0f; // LSB
+	msb = (UART_DIV_1200 >> 8) ; // MSB
+	lsb = UART_DIV_1200 & 0xff; // LSB
 
 	outb(msb, UART_BASE + UART_DLM);
 	outb(lsb, UART_BASE + UART_DLL);
@@ -232,11 +242,7 @@ static int serp_init(void)
 	// Send char
 	for (i = 0; i < 7; i++)
 	{
-		while (!(inb(UART_BASE + UART_LSR) & UART_LSR_THRE)) { // Check if THRE is empty and ready to receive a byte
-			schedule(); // If not this function allows for the SO to do something else (acho eu xD)
-		}
-
-		outb(c[i], UART_BASE + UART_TX);
+		w_char(c[i]);
 	}
 
 	return 0;
@@ -262,11 +268,7 @@ static void serp_exit(void)
 
 	for (i = 0; i < 6; i++)
 	{
-		while (!(inb(UART_BASE + UART_LSR) & UART_LSR_THRE)) { // Check if THRE is empty and ready to receive a byte
-			schedule(); // If not this function allows for the SO to do something else (acho eu xD)
-		}
-
-		outb(c[i], UART_BASE + UART_TX);
+		w_char(c[i]);
 	}
 
 }
