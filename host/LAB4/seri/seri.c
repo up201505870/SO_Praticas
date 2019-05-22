@@ -69,28 +69,26 @@ irqreturn_t seri_interrupt(int irq, void *dev_id) {
 
 	unsigned char in = inb(UART_BASE + UART_IIR);
 
-	printk(KERN_ALERT "%d\n", in);
+	printk(KERN_ALERT "Interrupt: %d\n", in);
 
-	if (in & UART_IIR_NO_INT) { // No interruption
+	if (in == UART_IIR_NO_INT) { // No interruption - Just in case
 
 		c[c_i] = 'x';
 		c_i++;
 
-	} else if (in & UART_IIR_RLSI) {
+	} else if (in == UART_IIR_RLSI) {
 
 		c[c_i] = 'l';
 		c_i++;
-	} else if (in & UART_IIR_RDI) {
+	} else if (in == UART_IIR_RDI) {
 
 		c[c_i] = 'r';
 		c_i++;
-	} else if (in & UART_IIR_THRI) {
+	} else if (in == UART_IIR_THRI) { 
 
 		c[c_i] = 't';
 		c_i++;
 	}
-
-	c[c_i] = 'n';
 
 	return IRQ_HANDLED;
 
@@ -116,7 +114,19 @@ static int seri_release(struct inode *inode, struct file *filp) {
 
 ssize_t seri_read(struct file *filep, char __user *buff, size_t count, loff_t *offp) {
 
+	unsigned char rx = 0;
+
 	printk(KERN_NOTICE "Ints: %s\n", c);
+
+	while( ! inb(UART_BASE + UART_LSR) & UART_LSR_DR) { 
+
+		schedule();
+
+	}
+
+	rx = inb(UART_BASE + UART_RX);
+
+	printk(KERN_ALERT "Received: %d\n", rx);
 
 	return 0;
 
@@ -125,6 +135,8 @@ ssize_t seri_read(struct file *filep, char __user *buff, size_t count, loff_t *o
 ssize_t seri_write(struct file *filep, const char __user *buff, size_t count, loff_t *offp) {
 
 	// struct seri_dev *dev = filep->private_data;
+
+	w_char('x');
 
 	return 0;
 
@@ -182,7 +194,7 @@ static int seri_init(void)
 	// Initialize UART
 
 	// Enable Reciever Data Available and Transmitter Holding Register Empty Interrupts
-	ier |= UART_IER_RDI | UART_IER_THRI;
+	ier |= UART_IER_RLSI | UART_IER_THRI | UART_IER_RDI; //
 	outb(ier, UART_BASE + UART_IER);
 
 	// Control Registers
