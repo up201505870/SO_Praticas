@@ -69,6 +69,8 @@ irqreturn_t seri_interrupt(int irq, void *dev_id) {
 
 	unsigned char in = inb(UART_BASE + UART_IIR);
 
+	printk(KERN_ALERT "%d\n", in);
+
 	if (in & UART_IIR_NO_INT) { // No interruption
 
 		c[c_i] = 'x';
@@ -200,7 +202,7 @@ static int seri_init(void)
 	lcr &= ~UART_LCR_DLAB; // Deactivate DLAB
 	outb(lcr, UART_BASE + UART_LCR);
 
-	status = request_irq(4, seri_interrupt, 0, "seri", &seri_devices[0]);
+	status = request_irq(4, seri_interrupt, 0, "seri0", &seri_devices[0]);
 	if (status) {
 		printk(KERN_ALERT "Error with requesting IRQ %d.\n", status);
 	}
