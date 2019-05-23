@@ -21,7 +21,7 @@ MODULE_LICENSE("Dual BSD/GPL");
 #define SERP_MAJOR 0   /* dynamic major by default */
 #define SERP_DEVS  4   /* seri0 through seri3 */
 
-#define RX_BUFFERSIZE 512
+#define RX_BUFFERSIZE 128
 
 #define UART_BASE 0x3f8
 
@@ -91,11 +91,11 @@ ssize_t serp_read(struct file *filep, char __user *buff, size_t count, loff_t *o
 	char *buffer;
 	struct serp_dev *dev = filep->private_data;
 
-	buffer = kmalloc(sizeof(char) * count, GFP_KERNEL);
-	memset(buffer, 0, sizeof(char) * count);
+	buffer = kmalloc(sizeof(char) * count + 1, GFP_KERNEL);
+	memset(buffer, 0, sizeof(char) * count + 1);
 
 	// 13 - means (Enter)
-	while((int)rx != 13 && (i < count - 1)) { // Wait for enter to return
+	while((int)rx != 13 && (i < count)) { // Wait for enter to return
 	
 		if(inb(UART_BASE + UART_LSR) & UART_LSR_OE) {
 
@@ -148,9 +148,6 @@ ssize_t serp_write(struct file *filep, const char __user *buff, size_t count, lo
 		return -1;
 
 	}
-
-	if (buffer[count - 1] != 0)
-		buffer[count - 1] = 0;
 
 	for(i = 0; i < count; i++) {
 

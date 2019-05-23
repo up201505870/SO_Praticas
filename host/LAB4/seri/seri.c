@@ -15,11 +15,15 @@
 #include <linux/sched.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
+#include <linux/kfifo.h>
+#include <linux/spinlock.h>
 
 MODULE_LICENSE("Dual BSD/GPL");
 
 #define SERI_MAJOR 0   /* dynamic major by default */
 #define SERI_DEVS  4   /* seri0 through seri3 */
+
+#define FIFO_SIZE 128
 
 #define UART_BASE 0x3f8
 
@@ -28,13 +32,18 @@ static int seri_release(struct inode *inode, struct file *filp);
 ssize_t seri_write(struct file *filep, const char __user *buff, size_t count, loff_t *offp);
 ssize_t seri_read(struct file *filep, char __user *buff, size_t count, loff_t *offp);
 
-static void w_char(const char c);
 irqreturn_t seri_interrupt(int irq, void *dev_id);
 
 struct seri_dev {
 	struct cdev cdev;
+	unsigned char txflag; // Flag for possible trasmission
 	struct semaphore mutex;
-	struct kfifo *rxfifo;
+	struct kfifo *rxfifo; // receiver info
+	struct kfifo *txfifo; // transmitter buffer
+	spinlock_t *rxfifo_lock;
+	spinlock_t *txfifo_lock;
+	wait_queue_head_t rxwq; // for IH sync
+	wait_queue_head_t txwq;
 };
 
 int seri_major = SERI_MAJOR;
@@ -51,43 +60,50 @@ struct file_operations seri_fops = {
 	.llseek		= no_llseek,
 };
 
-char *c;
-int c_i;
-
-
-static void w_char(const char c) {
-
-	while (!(inb(UART_BASE + UART_LSR) & UART_LSR_THRE)) { // Check if THRE is empty and ready to receive a byte
-		msleep_interruptible(10);
-	}
-
-	outb(c, UART_BASE + UART_TX);
-
-}
-
 irqreturn_t seri_interrupt(int irq, void *dev_id) {
 
 	unsigned char in = inb(UART_BASE + UART_IIR);
+	unsigned char error;
+	unsigned char read_byte = 0;
+	unsigned char write_byte = 0;
+	int ret = 0;
+	int status;
 
-	printk(KERN_ALERT "Interrupt: %d\n", in);
+	if (in == UART_IIR_NO_INT) { // No Interruption - Just in case - 1
 
-	if (in == UART_IIR_NO_INT) { // No interruption - Just in case
+	} else if (in == UART_IIR_RLSI) { // Line Status Interruption - 6
 
-		c[c_i] = 'x';
-		c_i++;
+		error = inb(UART_BASE + UART_LSR);
+		if(error & UART_LSR_OE) {
+			printk(KERN_ALERT "-> Overrun Error\n");
+		} else if(error & UART_LSR_PE) {
+			printk(KERN_ALERT "-> Parity Error\n");
+		} else if(error & UART_LSR_FE) {
+			printk(KERN_ALERT "-> Framing Error\n");
+		} else if(error & UART_LSR_BI) {
+			printk(KERN_ALERT "-> Break Interrupt Error\n");
+		}
 
-	} else if (in == UART_IIR_RLSI) {
+	} else if (in == UART_IIR_RDI) { // Read Data Interruption - 4
+		read_byte = inb(UART_BASE + UART_RX);
 
-		c[c_i] = 'l';
-		c_i++;
-	} else if (in == UART_IIR_RDI) {
+		ret = kfifo_put(((struct seri_dev *) dev_id)->rxfifo, &read_byte, 1);
+		if (ret != 1) {
+			printk(KERN_ALERT "Buffer full.\n");
+		}
 
-		c[c_i] = 'r';
-		c_i++;
-	} else if (in == UART_IIR_THRI) { 
+		wake_up_interruptible(&((struct seri_dev *) dev_id)->rxwq);
 
-		c[c_i] = 't';
-		c_i++;
+	} else if (in == UART_IIR_THRI) { // Transmitter Hold Register Interrupt - 2
+
+		status = kfifo_get(((struct seri_dev *) dev_id)->txfifo, &write_byte, 1);
+
+		if (status == 1) {
+			outb(write_byte, UART_BASE + UART_TX);
+			((struct seri_dev *) dev_id)->txflag = 0;
+		} else {
+			((struct seri_dev *) dev_id)->txflag = 1;
+		}
 	}
 
 	return IRQ_HANDLED;
@@ -114,19 +130,33 @@ static int seri_release(struct inode *inode, struct file *filp) {
 
 ssize_t seri_read(struct file *filep, char __user *buff, size_t count, loff_t *offp) {
 
-	unsigned char rx = 0;
+	int status;
+	char *buffer;
+	struct seri_dev *dev = filep->private_data;
 
-	printk(KERN_NOTICE "Ints: %s\n", c);
+	buffer = kmalloc(sizeof(char) * count, GFP_KERNEL);
+	memset(buffer, 0, sizeof(char) * count);
 
-	while( ! inb(UART_BASE + UART_LSR) & UART_LSR_DR) { 
+	// Check concurrency here?
 
-		schedule();
+	while( !kfifo_len(dev->rxfifo) ) {
+		printk(KERN_ALERT "Waiting...\n");
+
+		wait_event_interruptible(dev->rxwq, kfifo_len(dev->rxfifo));
 
 	}
 
-	rx = inb(UART_BASE + UART_RX);
+	status = kfifo_get(dev->rxfifo, buffer, (count > FIFO_SIZE) ? FIFO_SIZE : count);
 
-	printk(KERN_ALERT "Received: %d\n", rx);
+	printk(KERN_ALERT "Finished Waiting...\n");
+
+	status = copy_to_user(buff, buffer, status * sizeof(char));
+	if (status != 0) {
+		printk(KERN_ALERT "Couldn't copy all bytes.\n");
+		return -1; // Failed to copy, message stored in buffer
+	}
+
+	kfree(buffer);
 
 	return 0;
 
@@ -134,9 +164,36 @@ ssize_t seri_read(struct file *filep, char __user *buff, size_t count, loff_t *o
 
 ssize_t seri_write(struct file *filep, const char __user *buff, size_t count, loff_t *offp) {
 
-	// struct seri_dev *dev = filep->private_data;
+	struct seri_dev *dev = filep->private_data;
+	char *buffer;
+	unsigned char c;
+	unsigned long status;
 
-	w_char('x');
+	if(count == 0) {
+		return 0;
+	}
+
+	buffer = kmalloc(sizeof(char) * count, GFP_KERNEL);
+	memset(buffer, 0, sizeof(char) * count);
+
+	status = copy_from_user(buffer, buff, count);
+	if (status != 0) {
+		printk(KERN_ALERT "Couldn't copy all bytes.\n");
+		return -1;
+
+	}
+
+	status = kfifo_put(dev->txfifo, buffer, count);
+	if (status < count) {
+		printk(KERN_ALERT "Buffer full.\n");
+	}
+
+	if (dev->txflag == 1) {
+		kfifo_get(dev->txfifo, &c, 1);
+		outb(c, UART_BASE + UART_TX);
+	}
+	
+	kfree(buffer);
 
 	return 0;
 
@@ -146,6 +203,20 @@ static void seri_setup_cdev(struct seri_dev *dev, int index)
 {
 	int err, devno = MKDEV(seri_major, index);
     
+	spin_lock_init(dev->rxfifo_lock);
+	spin_lock_init(dev->txfifo_lock);
+
+	dev->rxfifo = kfifo_alloc(FIFO_SIZE, GFP_KERNEL, dev->rxfifo_lock);
+	dev->txfifo = kfifo_alloc(FIFO_SIZE, GFP_KERNEL, dev->txfifo_lock);
+
+	init_waitqueue_head(&dev->rxwq);
+	init_waitqueue_head(&dev->txwq);
+
+	// err = request_irq(4, seri_interrupt, IRQF_SHARED, "seri", dev);
+	// if (err) {
+	// 	printk(KERN_ALERT "Error with requesting IRQ %d.\n", err);
+	// }
+
 	cdev_init(&dev->cdev, &seri_fops);
 	dev->cdev.owner = THIS_MODULE;
 	dev->cdev.ops = &seri_fops;
@@ -162,11 +233,6 @@ static int seri_init(void)
 	unsigned char lcr = 0; // Line Control
 	unsigned char msb = 0, lsb = 0; // Msb and Lsb for DL
 	unsigned char ier = 0;
-
-	c_i = 0;
-	c = kmalloc(512 * sizeof(char), GFP_KERNEL);
-	memset(c, 0, 512 * sizeof(char));
-
 
 	if (seri_major) {
 		status = register_chrdev_region(dev, seri_devs, "seri");
@@ -214,13 +280,19 @@ static int seri_init(void)
 	lcr &= ~UART_LCR_DLAB; // Deactivate DLAB
 	outb(lcr, UART_BASE + UART_LCR);
 
-	status = request_irq(4, seri_interrupt, 0, "seri0", &seri_devices[0]);
+	// Send char
+	if (seri_devices[0].txflag == 1) {
+		kfifo_put(seri_devices[0].txfifo, "ello!", 6);
+		outb('H', UART_BASE + UART_TX);
+
+	} else {
+		kfifo_put(seri_devices[0].txfifo, "Hello!", 6);
+	}
+
+	status = request_irq(4, seri_interrupt, 0, "seri", &seri_devices[0]);
 	if (status) {
 		printk(KERN_ALERT "Error with requesting IRQ %d.\n", status);
 	}
-
-	// Send char
-	w_char('a');
 
 	return 0; // Success
 
@@ -234,6 +306,9 @@ static void seri_exit(void)
 	int i;
 
 	for (i = 0; i < seri_devs; i++) {
+
+		kfifo_free(seri_devices[i].rxfifo);
+		kfifo_free(seri_devices[i].txfifo);
 
 		cdev_del(&seri_devices[i].cdev);
 

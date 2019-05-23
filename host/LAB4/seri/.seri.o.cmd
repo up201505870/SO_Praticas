@@ -400,6 +400,7 @@ deps_/host/LAB4/seri/seri.o := \
   include/asm/sections.h \
   include/asm-generic/sections.h \
   include/linux/irq_cpustat.h \
+  include/linux/kfifo.h \
 
 /host/LAB4/seri/seri.o: $(deps_/host/LAB4/seri/seri.o)
 
