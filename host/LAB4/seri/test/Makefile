@@ -6,6 +6,7 @@ default:
 	gcc -o ioctlTest ioctlTest.c
 	gcc -o nusersTest nusersTest.c
 	gcc -o ononblockTest ononblockTest.c
+	gcc -o selectTest selectTest.c
 
 clean veryclean:
 	$(RM) readTest
@@ -13,3 +14,4 @@ clean veryclean:
 	$(RM) ioctlTest
 	$(RM) nusersTest
 	$(RM) ononblockTest
+	$(RM) selectTest

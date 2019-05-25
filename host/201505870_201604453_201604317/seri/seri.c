@@ -15,14 +15,15 @@
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <asm/uaccess.h>
-#include<linux/ioport.h>
+#include <linux/ioport.h>
 #include <asm/io.h>
 #include <linux/sched.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/kfifo.h>
 #include <linux/spinlock.h>
-#include<linux/ioctl.h>
+#include <linux/ioctl.h>
+#include <linux/poll.h>
 #include "seri.h"
 #include "serial_reg.h"
 
@@ -33,6 +34,7 @@ int seri_release(struct inode *inode, struct file *filp);
 ssize_t seri_write(struct file *filp, const char __user *buff, size_t count, loff_t *offp);
 ssize_t seri_read(struct file *filp, char __user *buff, size_t count, loff_t *offp);
 int seri_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg);
+static unsigned int seri_poll(struct file *filp, poll_table *wait);
 
 irqreturn_t seri_interrupt(int irq, void *dev_id);
 
@@ -62,6 +64,7 @@ struct file_operations seri_fops = {
 	.read 		= seri_read,
 	.llseek		= no_llseek,
 	.ioctl		= seri_ioctl,
+	.poll 		= seri_poll,
 };
 
 irqreturn_t seri_interrupt(int irq, void *dev_id) {
@@ -211,6 +214,26 @@ int seri_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigne
 	return -ENOTTY;
 }
 
+static unsigned int seri_poll(struct file *filp, poll_table *wait) { // ENHANCEMENT: 3.8 select/poll operations
+
+	struct seri_dev *dev = filp->private_data;
+	unsigned int mask = 0;
+
+	down(&dev->mutex);
+
+	poll_wait(filp, &dev->rxwq, wait); // Receiver FIFO
+	poll_wait(filp, &dev->txwq, wait); // Trasnmitter FIFO
+	if (kfifo_len(dev->rxfifo) > 0) { // Readable
+		mask |= POLLIN | POLLRDNORM;
+	}
+	if (kfifo_len(dev->txfifo) < FIFO_SIZE) {// Writable
+		mask |= POLLIN | POLLWRNORM;
+	}
+	up(&dev->mutex);
+
+	return mask;
+}
+
 ssize_t seri_read(struct file *filp, char __user *buff, size_t count, loff_t *offp) {
 
 	int status;
@@ -246,8 +269,6 @@ ssize_t seri_read(struct file *filp, char __user *buff, size_t count, loff_t *of
 	up(&dev->mutex);
 
 	status = kfifo_get(dev->rxfifo, buffer, (count > FIFO_SIZE) ? FIFO_SIZE : count);
-
-	printk(KERN_ALERT "Finished Waiting...\n");
 
 	status = copy_to_user(buff, buffer, status * sizeof(char));
 	if (status != 0) {
