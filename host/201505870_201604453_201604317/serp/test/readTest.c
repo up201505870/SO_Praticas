@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
 
     s = read(fd0, c, n);
     if (s == 0) {
-        printf("Received string - %s\n", c);
+        printf("Received data - %s\n", c);
     } else {
         printf("Error reading: %d\n", s);
     }

@@ -83,11 +83,14 @@ irqreturn_t seri_interrupt(int irq, void *dev_id) {
 		error = inb(UART_BASE + UART_LSR);
 		if(error & UART_LSR_OE) {
 			printk(KERN_ALERT "-> Overrun Error\n");
-		} else if(error & UART_LSR_PE) {
+		}
+		if(error & UART_LSR_PE) {
 			printk(KERN_ALERT "-> Parity Error\n");
-		} else if(error & UART_LSR_FE) {
+		} 
+		if(error & UART_LSR_FE) {
 			printk(KERN_ALERT "-> Framing Error\n");
-		} else if(error & UART_LSR_BI) {
+		}
+		if(error & UART_LSR_BI) {
 			printk(KERN_ALERT "-> Break Interrupt Error\n");
 		}
 
@@ -303,6 +306,8 @@ ssize_t seri_write(struct file *filp, const char __user *buff, size_t count, lof
 
 	}
 
+	down_interruptible(&dev->mutex); // ENHANCEMENT: 3.2 race conditions
+
 	status = kfifo_put(dev->txfifo, buffer, count);
 	if (status < count) {
 		printk(KERN_ALERT "Buffer full.\n");
@@ -312,6 +317,8 @@ ssize_t seri_write(struct file *filp, const char __user *buff, size_t count, lof
 		kfifo_get(dev->txfifo, &c, 1);
 		outb(c, UART_BASE + UART_TX);
 	}
+
+	up(&dev->mutex);
 	
 	kfree(buffer);
 
@@ -404,8 +411,8 @@ static int seri_init(void)
 
 	// Send char
 	if (seri_devices[0].txflag == 1) {
-		kfifo_put(seri_devices[0].txfifo, "ello!", 6);
 		outb('H', UART_BASE + UART_TX);
+		kfifo_put(seri_devices[0].txfifo, "ello!", 6);
 
 	} else {
 		kfifo_put(seri_devices[0].txfifo, "Hello!", 6);
