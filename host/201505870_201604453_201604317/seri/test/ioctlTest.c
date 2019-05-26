@@ -62,7 +62,7 @@ unsigned int create_config(int bitrate, int char_width, int parity, int stop_bit
 int main(int argc, char const **argv) {
     
     if (argc != 6 && argc != 2) {
-        printf("Wrong usage: %s GET|SET [BIT_RATE CHAR_WIDTH STOP_BITS PARTIY\nBIT_RATE: 1200, 9600\nCHAR_WIDTH: 5, 6, 7, 8\nSTOP_BITS: 1, 2\nPARITY: None, Odd, Even, 1, 0\n", argv[0]);
+        printf("Wrong usage: %s GET|SET BIT_RATE CHAR_WIDTH STOP_BITS PARTIY\nBIT_RATE: 1200, 9600\nCHAR_WIDTH: 5, 6, 7, 8\nSTOP_BITS: 1, 2\nPARITY: None, Odd, Even, 1, 0\n", argv[0]);
         return -1;
     }
 
@@ -112,7 +112,7 @@ int main(int argc, char const **argv) {
         ioctl(fd, SET_SERI, config);
 
     } else {
-        printf("Wrong usage: %s GET|SET [BIT_RATE CHAR_WIDTH PARTIY STOP_BITS\nBIT_RATE: 1200, 9600\nCHAR_WIDTH: 5, 6, 7, 8\nPARITY: None, Odd, Even, 1, 0\nSTOP_BITS: 1, 2", argv[0]);
+        printf("Wrong usage: %s GET|SET BIT_RATE CHAR_WIDTH PARTIY STOP_BITS\nBIT_RATE: 1200, 9600\nCHAR_WIDTH: 5, 6, 7, 8\nPARITY: None, Odd, Even, 1, 0\nSTOP_BITS: 1, 2", argv[0]);
         return -1;
     }
 
